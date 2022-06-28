@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using PlatformService.Data;
 using PlatformService.PlatformDomain;
+using PlatformService.Utils.CommandService;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,6 +38,9 @@ namespace PlatformService
             // Register AutoMapper
             var domainAssemblies = AppDomain.CurrentDomain.GetAssemblies();
             services.AddAutoMapper(domainAssemblies);
+
+            //Register HttpClient Factor
+            services.AddHttpClient<ICommandClient, CommandClient>();
 
             services.AddControllers();
             services.AddSwaggerGen(c =>
@@ -67,6 +71,8 @@ namespace PlatformService
             });
 
             MockInMemoryDatabase.MockPopulation(app);
+
+            Console.WriteLine($">>> CommandService Endpoint {Configuration["CommandService"]}");
         }
     }
 }

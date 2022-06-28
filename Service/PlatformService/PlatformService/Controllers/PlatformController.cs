@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using PlatformService.PlatformDomain;
+using PlatformService.Utils.CommandService;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -11,15 +12,51 @@ namespace PlatformService.Controllers
     [ApiController]
     public class PlatformController : ControllerBase
     {
+        private readonly ICommandClient _commandClient;
         private readonly IMapper _mapper;
         private readonly IPlatformRepository _platformRepository;
 
         public PlatformController(
             IPlatformRepository platformRepository,
-            IMapper mapper)
+            IMapper mapper,
+            ICommandClient commandClient)
         {
+            _commandClient = commandClient;
             _mapper = mapper;
             _platformRepository = platformRepository;
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<PlatformReadDto>> CreatePlatformAsync(
+            [FromBody] PlatformWriteDto platformWriteDto)
+        {
+            if (platformWriteDto is null)
+            {
+                return this.BadRequest(new
+                {
+                    Message = "Platform data should not be bull."
+                });
+            }
+
+            Console.WriteLine(">>>Creating target Platform...");
+            var platform = _mapper.Map<Platform>(platformWriteDto);
+            _ = await _platformRepository.CreatePlatformAsync(platform);
+
+            var platformReadDto = _mapper.Map<PlatformReadDto>(platform);
+
+            try
+            {
+                await _commandClient.SendMessageToCommand(platformReadDto);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($">>>Could not send synchronously to Command Service: {ex.Message}");
+            }
+
+            return CreatedAtRoute(
+                nameof(GetPlatformByIdAsync),
+                new { PlatformId = platform.PlatformId },
+                platformReadDto);
         }
 
         [HttpGet]
@@ -50,29 +87,6 @@ namespace PlatformService.Controllers
                 return Ok(_mapper.Map<PlatformReadDto>(platform));
             }
             return NotFound();
-        }
-
-        [HttpPost]
-        public async Task<ActionResult<PlatformReadDto>> CreatePlatformAsync(
-            [FromBody] PlatformWriteDto platformWriteDto)
-        {
-            if(platformWriteDto is null)
-            {
-                return this.BadRequest(new
-                {
-                    Message = "Platform data should not be bull."
-                });
-            }
-
-            Console.WriteLine(">>>Creating target Platform...");
-            var platform = _mapper.Map<Platform>(platformWriteDto);
-            _ = await _platformRepository.CreatePlatformAsync(platform);
-
-            var platformReadDto = _mapper.Map<PlatformReadDto>(platform);
-            return CreatedAtRoute(
-                nameof(GetPlatformByIdAsync),
-                new { PlatformId = platform.PlatformId },
-                platformReadDto);
         }
 
         [HttpPut]

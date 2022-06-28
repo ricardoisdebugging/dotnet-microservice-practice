@@ -1,6 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
-metadata: 
+metadata:  
   name: platforms-depl
 spec:
   replicas: 1
@@ -15,5 +15,18 @@ spec:
       containers:
         - name: platformservice
           image: ricardomao/platformservice:latest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: platforms-clusterip-svc
+spec:
+  selector:
+    app: platformservice
+  ports:
+  - name: platformservice
+    protocol: TCP 
+    port: 80
+    targetPort: 80
 
     
