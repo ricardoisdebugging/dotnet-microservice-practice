@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PlatformService.PlatformDomain;
 using System;
@@ -8,16 +9,28 @@ namespace PlatformService.Data
 {
     public class MockInMemoryDatabase
     {
-        public static void MockPopulation(IApplicationBuilder app)
+        public static void MockPopulation(IApplicationBuilder app, bool isProduction)
         {
             using (var serviceScope = app.ApplicationServices.CreateScope())
             {
-                SeedData(serviceScope.ServiceProvider.GetService<ApplicationDbContext>());
+                SeedData(serviceScope.ServiceProvider.GetService<ApplicationDbContext>(), isProduction);
             }
         }
 
-        private static void SeedData(ApplicationDbContext context)
+        private static void SeedData(ApplicationDbContext context, bool isProduction)
         {
+            if (isProduction)
+            {
+                Console.WriteLine(">>>Attempting to apply migration...");
+                try
+                {
+                    context.Database.Migrate();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($">>>Cannot run migration: {ex.Message}");
+                }
+            }
             if (!context.Platforms.Any())
             {
                 Console.WriteLine(">>>Seeding data...");
